@@ -1,0 +1,43 @@
+{
+  "name": "REACT-diploma",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "live-server",
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "prettier": "prettier --write  ."
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.12.0",
+    "bootstrap": "^5.3.8",
+    "live-server": "^1.2.2",
+    "nanoid": "^6.0.0",
+    "prettier": "^3.9.6",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-redux": "^9.3.0",
+    "react-router": "^8.3.0",
+    "react-router-dom": "^7.18.1",
+    "redux": "^5.0.1",
+    "reselect": "^5.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "eslint": "^10.5.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.6.0",
+    "vite": "^8.1.0"
+  },
+  "main": "index.js",
+  "repository": "git@github.com:LenaKlimkovich/REACT-diploma.git",
+  "author": "LenaKlimkovich <plat.elena2010@ya.ru>",
+  "license": "MIT"
+}
