@@ -4,38 +4,24 @@ import { RootState, AppDispatch } from "../store";
 import {
   fetchTopSales,
   fetchCategories,
+  fetchCatalogProducts,
   setActiveCategory,
-  fetchDefaultProducts,
-  fetchProductsByCategory,
   fetchLoadMore,
   changeSearchQuery,
-  fetchSearchQuery,
 } from "../store/productsSlice";
-import { ProductItem } from "./Product";
+import { ProductItem } from "./Product/Product";
+import { ErrorAlert } from "./ErrorAlert";
+import { useCallback } from "react";
 
 interface CatalogProps {
   withSearch: boolean;
 }
+
 export const Catalog = ({ withSearch = false }: CatalogProps) => {
   const dispatch = useDispatch<AppDispatch>();
   const searchQuery = useSelector(
     (state: RootState) => state.products.searchQuery,
   );
-  const [localSearch, setLocalSearch] = useState(searchQuery || "");
-
-  useEffect(() => {
-    dispatch(fetchTopSales());
-    dispatch(fetchCategories());
-    if (searchQuery) {
-      dispatch(fetchSearchQuery(searchQuery));
-    } else {
-      dispatch(fetchDefaultProducts());
-    }
-  }, [dispatch]);
-
-  useEffect(() => {
-    setLocalSearch(searchQuery || "");
-  }, [searchQuery]);
 
   const {
     items: categoriesItems,
@@ -48,39 +34,64 @@ export const Catalog = ({ withSearch = false }: CatalogProps) => {
     items: productItems,
     loading: productsLoading,
     error: productsError,
+    loadMoreError,
     offset,
     hasMore,
   } = useSelector((state: RootState) => state.products.products);
+  const [localSearch, setLocalSearch] = useState(searchQuery || "");
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const nextValue = e.target.value;
-    setLocalSearch(nextValue);
+  useEffect(() => {
+    dispatch(fetchTopSales());
+    dispatch(fetchCategories());
+  }, [dispatch]);
 
-    if (nextValue.trim() === "") {
-      dispatch(changeSearchQuery(""));
-      dispatch(fetchDefaultProducts());
-    }
-  };
+  useEffect(() => {
+    dispatch(
+      fetchCatalogProducts({ categoryId: activeId, query: searchQuery }),
+    );
+  }, [dispatch, activeId, searchQuery]);
+
+  useEffect(() => {
+    setLocalSearch(searchQuery || "");
+  }, [searchQuery]);
+
+const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const nextValue = e.target.value;
+  setLocalSearch(nextValue);
+
+  if (nextValue.trim() === "") {
+    dispatch(changeSearchQuery(""));
+  }
+}, [dispatch]);
 
   const handleClearSearch = () => {
     setLocalSearch("");
     dispatch(changeSearchQuery(""));
-    dispatch(fetchDefaultProducts());
   };
 
-  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (localSearch.length === 0) {
       handleClearSearch();
       return;
     }
     dispatch(changeSearchQuery(localSearch));
-    dispatch(fetchSearchQuery(localSearch));
   };
 
-  const handlerLoadMore = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    dispatch(fetchLoadMore({ offset, categoryId: activeId ?? 0 }));
+  const handlerLoadMore = useCallback(() => {
+  dispatch(
+    fetchLoadMore({ offset, categoryId: activeId, query: searchQuery }),
+  );
+}, [dispatch, offset, activeId, searchQuery]);
+
+  const handlerReload = () => {
+    if (categoriesError) {
+      dispatch(fetchTopSales());
+      dispatch(fetchCategories());
+    }
+    dispatch(
+      fetchCatalogProducts({ categoryId: activeId, query: searchQuery }),
+    );
   };
 
   return (
@@ -91,7 +102,6 @@ export const Catalog = ({ withSearch = false }: CatalogProps) => {
         <form
           className="catalog-search-form form-inline"
           onSubmit={handleSearchSubmit}
-          style={{ position: "relative", display: "flex", margin: 0 }}
         >
           <input
             type="search"
@@ -122,7 +132,6 @@ export const Catalog = ({ withSearch = false }: CatalogProps) => {
                   onClick={(e) => {
                     e.preventDefault();
                     dispatch(setActiveCategory(category.id));
-                    dispatch(fetchProductsByCategory(category.id));
                   }}
                 >
                   {category.title}
@@ -132,7 +141,7 @@ export const Catalog = ({ withSearch = false }: CatalogProps) => {
           </ul>
         )}
 
-      {!categoriesLoading && !productsError && productItems.length > 0 && (
+      {!categoriesLoading && productItems.length > 0 && (
         <div className="row">
           {productItems.map((item) => (
             <div className="col-12 col-md-6 col-lg-4 mb-4" key={item.id}>
@@ -142,7 +151,7 @@ export const Catalog = ({ withSearch = false }: CatalogProps) => {
         </div>
       )}
 
-      {categoriesLoading && (
+      {(categoriesLoading || productsLoading) && (
         <div className="preloader">
           <span></span>
           <span></span>
@@ -150,24 +159,36 @@ export const Catalog = ({ withSearch = false }: CatalogProps) => {
           <span></span>
         </div>
       )}
-      {productsLoading && (
-        <div className="preloader">
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
+      {hasMore &&
+        !productsLoading &&
+        productItems.length >= 6 &&
+        !loadMoreError && (
+          <div className="text-center">
+            <button
+              className="btn btn-outline-primary"
+              onClick={handlerLoadMore}
+              disabled={productsLoading}
+            >
+              Загрузить ещё
+            </button>
+          </div>
+        )}
+      {loadMoreError && !productsLoading && (
+        <ErrorAlert
+          message={
+            loadMoreError || "Не удалось загрузить дополнительные товары"
+          }
+          onReload={handlerLoadMore}
+        />
       )}
-      {hasMore && !productsLoading && (
-        <div className="text-center">
-          <button
-            className="btn btn-outline-primary"
-            onClick={handlerLoadMore}
-            disabled={productsLoading}
-          >
-            Загрузить ещё
-          </button>
-        </div>
+
+      {productsError && !productsLoading && productItems.length === 0 && (
+        <ErrorAlert
+          message={
+            productsError || categoriesError || "Произошла неизвестная ошибка"
+          }
+          onReload={handlerReload}
+        />
       )}
     </section>
   );

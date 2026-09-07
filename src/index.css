@@ -31,6 +31,10 @@ section {
 }
 
 /* Header */
+.menu__item-active {
+  font-weight: bold;
+}
+
 .header-controls-pics {
   display: flex;
   justify-content: space-between;
@@ -167,7 +171,12 @@ section {
     transform: translate(0, 160%);
   }
 }
+/* Reload button */
 
+.reloadButton {
+  display: flex;
+  margin: auto;
+}
 /* Top Sales */
 .top-sales {
   min-height: 300px;

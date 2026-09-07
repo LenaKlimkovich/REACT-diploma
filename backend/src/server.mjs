@@ -2,6 +2,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
+
 const { randomInt } = await import("node:crypto");
 import { setTimeout } from "node:timers/promises";
 
@@ -62,7 +63,7 @@ const sendResponse = (res, statusCode, data = null) => {
   res.end(JSON.stringify(data));
 };
 
-const createServer = (port = 7070) => {
+const createServer = (port = 7075) => {
   const server = http.createServer(async (req, res) => {
     if (req.method === "OPTIONS") {
       return handleOptionsRequest(req, res);
@@ -80,8 +81,32 @@ const createServer = (port = 7070) => {
     const pathname = parsedUrl.pathname;
     const query = parsedUrl.query;
 
+    if (pathname.startsWith("/api/images/") && req.method === "GET") {
+      const fileName = decodeURIComponent(path.basename(pathname));
+
+      const rootDir = path.resolve(__dirname, "..", "..", "img", "products");
+      const filePath = path.join(rootDir, fileName);
+
+      if (fs.existsSync(filePath)) {
+        const ext = path.extname(filePath).toLowerCase();
+        let contentType = "image/jpeg";
+        if (ext === ".png") contentType = "image/png";
+        if (ext === ".webp") contentType = "image/webp";
+
+        setCorsHeaders(res);
+        res.writeHead(200, { "Content-Type": contentType });
+        const stream = fs.createReadStream(filePath);
+        return stream.pipe(res);
+      } else {
+        return sendResponse(
+          res,
+          404,
+          "Изображение не найдено в папке products",
+        );
+      }
+    }
+
     try {
-      // Маршруты
       if (pathname === "/api/top-sales" && req.method === "GET") {
         const topSales = items
           .filter((o) => topSaleIds.includes(o.id))

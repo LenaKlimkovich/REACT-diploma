@@ -1,8 +1,10 @@
-export const ErrorPage = () => {
+import { ReactElement } from "react";
+
+export const ErrorPage = (): ReactElement => {
   return (
-    <section className="top-sales">
-      <h2 className="text-center">Страница не найдена</h2>
-      <p>Извините, такая страница не найдена!</p>
+    <section className="error-404 text-center my-5">
+      <h2 className="display-4 font-weight-bold">404</h2>
+      <p className="lead font-weight-bold">Страница не найдена</p>
     </section>
   );
 };

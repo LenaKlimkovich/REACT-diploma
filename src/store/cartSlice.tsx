@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { DetailedProduct } from "../types";
+import { API_URL } from "../config";
 
 export interface CartItem {
   item: DetailedProduct;
@@ -27,27 +28,8 @@ interface Order {
   }[];
 }
 
-const getFromLocalStorage = (): CartItem[] => {
-  try {
-    const serializedCart = localStorage.getItem("cart");
-    return serializedCart ? JSON.parse(serializedCart) : [];
-  } catch (e) {
-    console.error("Не удалось загрузить корзину из localStorage", e);
-    return [];
-  }
-};
-
-const pushToLocalStorage = (items: CartItem[]) => {
-  try {
-    const serializedCart = JSON.stringify(items);
-    localStorage.setItem("cart", serializedCart);
-  } catch (e) {
-    console.error("Не удалось сохранить корзину в localStorage", e);
-  }
-};
-
 const initialState: CartState = {
-  items: getFromLocalStorage(),
+  items: [],
   loading: false,
   error: null,
   success: false,
@@ -59,7 +41,7 @@ export const fetchSendOrder = createAsyncThunk<
   { rejectValue: string }
 >("cart/fetchSendOrder", async (orderData, { rejectWithValue }) => {
   try {
-    const response = await fetch("http://localhost:7070/api/order", {
+    const response = await fetch(`${API_URL}/order`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -79,7 +61,10 @@ const cartSlice = createSlice({
   name: "cart",
   initialState,
   reducers: {
-    addToCart: (state, action) => {
+    setCartItems: (state, action: PayloadAction<CartItem[]>) => {
+      state.items = action.payload;
+    },
+    addToCart: (state, action: PayloadAction<CartItem>) => {
       const existingItem = state.items.find(
         (product) =>
           product.item.id === action.payload.item.id &&
@@ -93,7 +78,7 @@ const cartSlice = createSlice({
       } else {
         state.items.push(action.payload);
       }
-      pushToLocalStorage(state.items);
+      localStorage.setItem("cart", JSON.stringify(state.items));
     },
     removeFromCart: (
       state,
@@ -104,16 +89,13 @@ const cartSlice = createSlice({
           item.item.id !== action.payload.id ||
           item.size !== action.payload.size,
       );
-
-      pushToLocalStorage(state.items);
+      localStorage.setItem("cart", JSON.stringify(state.items));
     },
-    // ИСПРАВЛЕНО: Редюсер теперь правильно закрывается фигурной скобкой
     resetCartStatus: (state) => {
       state.success = false;
       state.error = null;
     },
-  }, // <-- ЭТА СКОБКА БЫЛА ПРОПУЩЕНА (закрывает объект reducers)
-
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchSendOrder.pending, (state) => {
@@ -130,11 +112,12 @@ const cartSlice = createSlice({
       .addCase(fetchSendOrder.rejected, (state, action) => {
         state.loading = false;
         state.success = false;
-        state.error = action.payload || "Произошла ошибка";
+        state.error = (action.payload as string) || "Произошла ошибка";
       });
   },
 });
 
-export const { addToCart, removeFromCart, resetCartStatus } = cartSlice.actions;
+export const { setCartItems, addToCart, removeFromCart, resetCartStatus } =
+  cartSlice.actions;
 
 export default cartSlice.reducer;

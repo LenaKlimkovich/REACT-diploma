@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
 import { fetchTopSales } from "../store/productsSlice";
-import { ProductItem } from "./Product";
+import { ProductItem } from "./Product/Product";
 
 export const TopSales = () => {
   const dispatch = useDispatch<AppDispatch>();

@@ -1,9 +1,6 @@
-import { Link } from "react-router-dom";
-import { useEffect } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState, AppDispatch } from "../../store";
+import { ReactElement } from "react";
 import { Catalog } from "../Catalog";
 
-export const CatalogPage = () => {
+export const CatalogPage = (): ReactElement => {
   return <Catalog withSearch={true} />;
 };

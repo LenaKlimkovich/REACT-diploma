@@ -1,0 +1,68 @@
+.searchFormWrap {
+  position: relative !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 40px;
+  height: 40px;
+}
+
+.searchForm {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  height: 100% !important;
+  width: 200px;
+  transition:
+    width 0.2s ease,
+    opacity 0.2s ease;
+  opacity: 1;
+  visibility: visible;
+}
+
+.searchForm.invisibleForm {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  overflow: hidden;
+}
+
+.searchInput {
+  width: 100% !important;
+  height: 34px !important;
+  padding-right: 35px !important;
+  border-radius: 15px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.searchBtn {
+  position: absolute !important;
+  right: 8px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 50 !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+
+.searchExpanderStatic {
+  position: absolute !important;
+  right: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  cursor: pointer;
+  z-index: 5 !important;
+}
+
+.cartIcon {
+  margin-left: 15px;
+}

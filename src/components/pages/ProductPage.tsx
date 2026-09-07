@@ -1,5 +1,5 @@
 import { useDispatch, useSelector } from "react-redux";
-import { useEffect, useState } from "react";
+import { ReactElement, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RootState, AppDispatch } from "../../store";
 import {
@@ -10,8 +10,9 @@ import {
 } from "../../store/detailedProductSlice";
 import { addToCart } from "../../store/cartSlice";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../../config";
 
-export const ProductPage = () => {
+export const ProductPage = (): ReactElement => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -24,6 +25,7 @@ export const ProductPage = () => {
 
   useEffect(() => {
     dispatch(resetAmount());
+    setSelectedSize(null);
   }, [dispatch, id]);
 
   const { amount, data, loading, error } = useSelector(
@@ -49,7 +51,7 @@ export const ProductPage = () => {
   }
 
   const handleToCart = () => {
-    navigate("/cart");
+    if (!selectedSize) return;
     dispatch(
       addToCart({
         item: data,
@@ -58,17 +60,22 @@ export const ProductPage = () => {
         price: data.price,
       }),
     );
+    navigate("/cart");
   };
 
   const availableSizes = data.sizes.filter((size) => size.available) || [];
 
+  const initialImage = data.images && data.images[0] ? data.images[0] : "";
+  const filename = initialImage.substring(initialImage.lastIndexOf("/") + 1);
+  const imageSrc = `${API_URL}/images/${filename}`;
+
   return (
-<>
+    <>
       <section className="catalog-item">
         <h2 className="text-center">{data.title}</h2>
         <div className="row">
           <div className="col-5">
-            <img src={data.images[0]} className="img-fluid" alt={data.title} />
+            <img src={imageSrc} className="img-fluid" alt={data.title} />
           </div>
           <div className="col-7">
             <table className="table table-bordered">

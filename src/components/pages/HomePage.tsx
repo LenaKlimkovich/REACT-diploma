@@ -1,62 +1,14 @@
-import { useEffect } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState, AppDispatch } from "../../store";
-import {
-  fetchTopSales,
-  fetchCategories,
-  fetchDefaultProducts,
-  fetchLoadMore,
-} from "../../store/productsSlice";
 import { TopSales } from "../TopSales";
 import { Catalog } from "../Catalog";
+import { ReactElement } from "react";
 
-export const HomePage = () => {
-  const dispatch = useDispatch<AppDispatch>();
-
-  useEffect(() => {
-    dispatch(fetchTopSales());
-    dispatch(fetchCategories());
-    dispatch(fetchDefaultProducts());
-  }, [dispatch]);
-
-  const {
-    items: topSalesItems,
-    loading: topSalesLoading,
-    error: topSalesError,
-  } = useSelector((state: RootState) => state.products.topSales);
-
-  const {
-    items: categoriesItems,
-    activeId,
-    loading: categoriesLoading,
-    error: categoriesError,
-  } = useSelector((state: RootState) => state.products.categories);
-
-  const {
-    items: productItems,
-    loading: productsLoading,
-    error: productsError,
-    offset,
-    hasMore,
-  } = useSelector((state: RootState) => state.products.products);
-
-  const hideTopSales =
-    !topSalesLoading && !topSalesError && topSalesItems.length === 0;
-  const newOffset = offset + 6;
-
-  const handlerLoadMore = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    dispatch(fetchLoadMore({ offset: newOffset, categoryId: activeId ?? 0 }));
-  };
-
+export const HomePage = (): ReactElement => {
   return (
-    <main className="container">
-      <div className="row">
-        <div className="col">
-          <TopSales />
-          <Catalog withSearch={false} />
-        </div>
+    <div className="row">
+      <div className="col">
+        <TopSales />
+        <Catalog withSearch={false} />
       </div>
-    </main>
+    </div>
   );
 };

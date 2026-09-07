@@ -1,12 +1,13 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { Product, DetailedProduct } from "../types";
+import { API_URL } from "../config";
 
 interface DetailedProductState {
   detailedProduct: {
     amount: number;
     loading: boolean;
     error: string | null;
-    data: DetailedProduct;
+    data: DetailedProduct | null;
   };
 }
 
@@ -15,7 +16,7 @@ const initialState: DetailedProductState = {
     amount: 1,
     loading: false,
     error: null,
-    data: null as unknown as DetailedProduct,
+    data: null,
   },
 };
 
@@ -25,7 +26,7 @@ export const fetchProductById = createAsyncThunk<
   { rejectValue: string }
 >("detailedProduct/fetchProductById", async (id, { rejectWithValue }) => {
   try {
-    const response = await fetch(`http://localhost:7070/api/items/${id}`);
+    const response = await fetch(`${API_URL}/items/${id}`);
 
     if (!response.ok) {
       return rejectWithValue("Ошибка сети. Попробуйте позже.");
@@ -68,7 +69,8 @@ const detailedProductSlice = createSlice({
       })
       .addCase(fetchProductById.rejected, (state, action) => {
         state.detailedProduct.loading = false;
-        state.detailedProduct.error = action.payload || "Неизвестная ошибка";
+        state.detailedProduct.error =
+          (action.payload as string) || "Неизвестная ошибка";
       });
   },
 });

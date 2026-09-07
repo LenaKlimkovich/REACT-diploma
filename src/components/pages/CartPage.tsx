@@ -1,22 +1,22 @@
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { RootState, AppDispatch } from "../../store";
+import { ReactElement } from "react";
 import {
   removeFromCart,
   fetchSendOrder,
   resetCartStatus,
 } from "../../store/cartSlice";
+import { ErrorAlert } from "../ErrorAlert";
 
-export const CartPage = () => {
+export const CartPage = (): ReactElement => {
   const dispatch = useDispatch<AppDispatch>();
   const cart = useSelector((state: RootState) => state.cart.items);
 
-  const totalPrice = cart.reduce(
-    (sum, item) => sum + item.price * item.amount,
-    0,
-  );
-
+ const totalPrice = useMemo(() => {
+  return cart.reduce((sum, item) => sum + item.price * item.amount, 0);
+}, [cart]);
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [agreement, setAgreement] = useState(false);
@@ -34,41 +34,38 @@ export const CartPage = () => {
     }
   }, [success, dispatch]);
 
+  const orderData = () => ({
+    owner: {
+      phone: phone.trim(),
+      address: address.trim(),
+    },
+    items: cart.map((item) => ({
+      id: item.item.id,
+      price: item.price,
+      count: item.amount,
+    })),
+  });
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!phone.trim() || !address.trim() || !agreement) return;
+    dispatch(fetchSendOrder(orderData()));
+  };
 
-    const orderData = {
-      owner: {
-        phone: phone.trim(),
-        address: address.trim(),
-      },
-      items: cart.map((item) => ({
-        id: item.item.id,
-        price: item.price,
-        count: item.amount,
-      })),
-    };
-
-    dispatch(fetchSendOrder(orderData));
+  const handlerCartReload = () => {
+    dispatch(fetchSendOrder(orderData()));
   };
 
   return (
     <>
       <section className="cart">
         <h2 className="text-center">Корзина</h2>
-
-        {/* Сообщение об успешном оформлении заказа */}
         {success && (
           <div className="alert alert-success text-center">
             Ваш заказ успешно оформлен!
           </div>
         )}
-
-        {/* Вывод ошибки от сервера, если она произошла */}
         {error && <div className="alert alert-danger text-center">{error}</div>}
-
-        {/* Вывод лоадера Нетологии во время POST-запроса */}
         {loading && (
           <div className="preloader mb-4">
             <span></span>
@@ -77,13 +74,9 @@ export const CartPage = () => {
             <span></span>
           </div>
         )}
-
-        {/* Заглушка, если корзина пуста и заказ не отправлен */}
         {cart.length === 0 && !success && (
           <div className="alert alert-info text-center">Ваша корзина пуста</div>
         )}
-
-        {/* Таблица с товарами: показывается только если корзина не пуста и заказ еще не оформлен */}
         {cart.length !== 0 && !success && (
           <table className="table table-bordered">
             <thead>
@@ -102,7 +95,7 @@ export const CartPage = () => {
                 <tr key={`${item.item.id}-${item.size}`}>
                   <th scope="row">{index + 1}</th>
                   <td>
-                    <Link to={`/catalog/${item.item.id}.html`}>
+                    <Link to={`/catalog/${item.item.id}`}>
                       {item.item.title}
                     </Link>
                   </td>
@@ -137,8 +130,6 @@ export const CartPage = () => {
           </table>
         )}
       </section>
-
-      {/* Блок оформления заказа: прячется при пустой корзине или после успешной покупки */}
       {cart.length > 0 && !success && (
         <section className="order">
           <h2 className="text-center">Оформить заказ</h2>
@@ -192,6 +183,9 @@ export const CartPage = () => {
               </button>
             </form>
           </div>
+          {error && !loading && (
+            <ErrorAlert message={error} onReload={handlerCartReload} />
+          )}
         </section>
       )}
     </>

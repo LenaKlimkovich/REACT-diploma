@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { Product, Categories } from "../types";
+import { API_URL } from "../config";
 
 interface CatalogState {
   topSales: {
@@ -17,6 +18,7 @@ interface CatalogState {
     items: Product[];
     loading: boolean;
     error: string | null;
+    loadMoreError: string | null;
     offset: number;
     hasMore: boolean;
   };
@@ -30,6 +32,7 @@ const initialState: CatalogState = {
     items: [],
     loading: false,
     error: null,
+    loadMoreError: null,
     offset: 0,
     hasMore: true,
   },
@@ -42,7 +45,7 @@ export const fetchTopSales = createAsyncThunk<
   { rejectValue: string }
 >("products/fetchTopSales", async (_, { rejectWithValue }) => {
   try {
-    const response = await fetch("http://localhost:7070/api/top-sales");
+    const response = await fetch(`${API_URL}/top-sales`);
 
     if (!response.ok) {
       return rejectWithValue("Ошибка сети. Попробуйте позже.");
@@ -61,7 +64,7 @@ export const fetchCategories = createAsyncThunk<
   { rejectValue: string }
 >("products/fetchCategories", async (_, { rejectWithValue }) => {
   try {
-    const response = await fetch("http://localhost:7070/api/categories");
+    const response = await fetch(`${API_URL}/categories`);
 
     if (!response.ok) {
       return rejectWithValue("Ошибка сети. Попробуйте позже.");
@@ -74,57 +77,58 @@ export const fetchCategories = createAsyncThunk<
   }
 });
 
-export const fetchDefaultProducts = createAsyncThunk<
-  Product[],
-  void,
-  { rejectValue: string }
->("products/fetchDefaultProducts", async (_, { rejectWithValue }) => {
-  try {
-    const response = await fetch("http://localhost:7070/api/items");
-
-    if (!response.ok) {
-      return rejectWithValue("Ошибка сети. Попробуйте позже.");
-    }
-
-    const data: Product[] = await response.json();
-    return data;
-  } catch (e) {
-    return rejectWithValue("Что-то пошло не так при запросе данных");
-  }
-});
-
-export const fetchProductsByCategory = createAsyncThunk<
-  Product[],
-  number,
-  { rejectValue: string }
->("products/fetchProductsByCategory", async (X, { rejectWithValue }) => {
-  try {
-    const response = await fetch(
-      `http://localhost:7070/api/items?categoryId=${X}`,
-    );
-
-    if (!response.ok) {
-      return rejectWithValue("Ошибка сети. Попробуйте позже.");
-    }
-
-    const data: Product[] = await response.json();
-    return data;
-  } catch (e) {
-    return rejectWithValue("Что-то пошло не так при запросе данных");
-  }
-});
-
 export const fetchLoadMore = createAsyncThunk<
   Product[],
-  { offset: number; categoryId: number },
+  { categoryId?: number | null; query?: string; offset: number },
   { rejectValue: string }
 >(
   "products/fetchLoadMore",
-  async ({ offset, categoryId }, { rejectWithValue }) => {
+  async ({ categoryId, query, offset }, { rejectWithValue }) => {
     try {
-      const response = await fetch(
-        `http://localhost:7070/api/items?categoryId=${categoryId}&offset=${offset}`,
-      );
+      const params = new URLSearchParams();
+      params.append("offset", String(offset));
+
+      if (query && query.trim() !== "") {
+        params.append("q", query.trim());
+      }
+      if (categoryId && categoryId !== 0) {
+        params.append("categoryId", String(categoryId));
+      }
+
+      const response = await fetch(`${API_URL}/items?${params.toString()}`);
+      if (!response.ok) throw new Error();
+
+      return await response.json();
+    } catch (e) {
+      return rejectWithValue("Не удалось загрузить дополнительные товары");
+    }
+  },
+);
+
+export const fetchCatalogProducts = createAsyncThunk<
+  Product[],
+  { categoryId?: number | null; query?: string },
+  { rejectValue: string }
+>(
+  "products/fetchCatalogProducts",
+  async ({ categoryId, query }, { rejectWithValue }) => {
+    try {
+      const params = new URLSearchParams();
+
+      if (query && query.trim() !== "") {
+        params.append("q", query.trim());
+      }
+
+      if (categoryId && categoryId !== 0) {
+        params.append("categoryId", String(categoryId));
+      }
+
+      const queryString = params.toString();
+      const url = queryString
+        ? `${API_URL}/items?${queryString}`
+        : `${API_URL}/items`;
+
+      const response = await fetch(url);
 
       if (!response.ok) {
         return rejectWithValue("Ошибка сети. Попробуйте позже.");
@@ -138,36 +142,18 @@ export const fetchLoadMore = createAsyncThunk<
   },
 );
 
-export const fetchSearchQuery = createAsyncThunk<
-  Product[],
-  string,
-  { rejectValue: string }
->("products/fetchSearchQuery", async (query, { rejectWithValue }) => {
-  try {
-    const response = await fetch(`http://localhost:7070/api/items?q=${query}`);
-
-    if (!response.ok) {
-      return rejectWithValue("Ошибка сети. Попробуйте позже.");
-    }
-
-    const data: Product[] = await response.json();
-    return data;
-  } catch (e) {
-    return rejectWithValue("Что-то пошло не так при запросе данных");
-  }
-});
-
 const productsSlice = createSlice({
   name: "products",
   initialState,
   reducers: {
-    setActiveCategory: (state, action) => {
+    setActiveCategory: (state, action: PayloadAction<number | null>) => {
       state.categories.activeId = action.payload;
       state.products.items = [];
       state.products.offset = 0;
       state.products.hasMore = true;
+      state.products.loadMoreError = null;
     },
-    changeSearchQuery: (state, action) => {
+    changeSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
     },
   },
@@ -189,80 +175,45 @@ const productsSlice = createSlice({
       .addCase(fetchCategories.pending, (state) => {
         state.categories.loading = true;
         state.categories.error = null;
-        state.categories.items = [];
       })
       .addCase(fetchCategories.fulfilled, (state, action) => {
         state.categories.loading = false;
+        state.categories.error = null;
         state.categories.items = [{ id: 0, title: "Все" }, ...action.payload];
-
-        if (state.categories.activeId === null) {
-          state.categories.activeId = 0;
-        }
+        state.categories.activeId = 0;
       })
       .addCase(fetchCategories.rejected, (state, action) => {
         state.categories.loading = false;
         state.categories.error = action.payload || "Неизвестная ошибка";
-        state.categories.items = [];
       })
-      .addCase(fetchDefaultProducts.pending, (state) => {
+      .addCase(fetchCatalogProducts.pending, (state) => {
         state.products.loading = true;
         state.products.error = null;
+        state.products.loadMoreError = null;
       })
-      .addCase(fetchDefaultProducts.fulfilled, (state, action) => {
-        state.products.loading = false;
-        state.products.items = action.payload;
-        state.products.offset = action.payload.length;
-      })
-      .addCase(fetchDefaultProducts.rejected, (state, action) => {
-        state.products.loading = false;
-        state.products.error = action.payload || "Неизвестная ошибка";
-      })
-      .addCase(fetchProductsByCategory.pending, (state) => {
-        state.products.loading = true;
-        state.products.error = null;
-      })
-      .addCase(fetchProductsByCategory.fulfilled, (state, action) => {
-        state.products.loading = false;
-        state.products.items = action.payload;
-        state.products.offset = action.payload.length;
-      })
-      .addCase(fetchProductsByCategory.rejected, (state, action) => {
-        state.products.loading = false;
-        state.products.error = action.payload || "Неизвестная ошибка";
-      })
-      .addCase(fetchLoadMore.pending, (state) => {
-        state.products.loading = true;
-        state.products.error = null;
-      })
-      .addCase(fetchLoadMore.fulfilled, (state, action) => {
-        state.products.loading = false;
-        state.products.items.push(...action.payload);
-        state.products.offset += action.payload.length;
-        if (action.payload.length < 6) {
-          state.products.hasMore = false;
-        }
-      })
-      .addCase(fetchLoadMore.rejected, (state, action) => {
-        state.products.loading = false;
-        state.products.error = action.payload || "Неизвестная ошибка";
-      })
-      .addCase(fetchSearchQuery.pending, (state) => {
-        state.products.loading = true;
-        state.products.error = null;
-      })
-      .addCase(fetchSearchQuery.fulfilled, (state, action) => {
+      .addCase(fetchCatalogProducts.fulfilled, (state, action) => {
         state.products.loading = false;
         state.products.items = action.payload;
         state.products.offset = action.payload.length;
         state.products.hasMore = action.payload.length >= 6;
       })
-      .addCase(fetchSearchQuery.rejected, (state, action) => {
+      .addCase(fetchCatalogProducts.rejected, (state, action) => {
         state.products.loading = false;
-        if (typeof action.payload === "string") {
-          state.products.error = action.payload;
-        } else {
-          state.products.error = action.error.message || "Неизвестная ошибка";
-        }
+        state.products.error = action.payload || "Неизвестная ошибка";
+      })
+      .addCase(fetchLoadMore.pending, (state) => {
+        state.products.loading = true;
+        state.products.loadMoreError = null;
+      })
+      .addCase(fetchLoadMore.fulfilled, (state, action) => {
+        state.products.loading = false;
+        state.products.items.push(...action.payload);
+        state.products.offset += action.payload.length;
+        state.products.hasMore = action.payload.length >= 6;
+      })
+      .addCase(fetchLoadMore.rejected, (state, action) => {
+        state.products.loading = false;
+        state.products.loadMoreError = action.payload || "Неизвестная ошибка";
       });
   },
 });
